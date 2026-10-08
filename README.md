@@ -1,8 +1,6 @@
 <p align="center">
   <img src="./assets/hero.png" width="100%" alt="OpenAI Live Orb Study">
 </p>
-````bash
-cd "/Users/ian/Desktop/开发/openai live orb/open-source/horizon-orb-ui"
 
 # OpenAI Live Orb Study
 ## Preview
