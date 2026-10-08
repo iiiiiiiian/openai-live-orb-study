@@ -4,7 +4,6 @@
 ````bash
 cd "/Users/ian/Desktop/开发/openai live orb/open-source/horizon-orb-ui"
 
-cat > README.md <<'EOF'
 # OpenAI Live Orb Study
 ## Preview
 
