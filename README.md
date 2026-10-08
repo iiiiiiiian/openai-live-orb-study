@@ -1,3 +1,13 @@
+## Preview
+
+<p align="center">
+  <img src="./assets/gpt-voice.webp" width="100%" alt="ChatGPT Voice visualizer reference">
+</p>
+
+<p align="center">
+  <img src="./assets/orb-demo-1.png" width="49%" alt="Horizon Orb demo">
+  <img src="./assets/orb-demo-2.png" width="49%" alt="Horizon Orb demo">
+</p>
 ````bash
 cd "/Users/ian/Desktop/开发/openai live orb/open-source/horizon-orb-ui"
 
