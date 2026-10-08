@@ -1,3 +1,6 @@
+<p align="center">
+  <img src="./assets/gpt-voice.webp" width="100%" alt="OpenAI Live Voice Orb">
+</p>
 ## Preview
 
 <p align="center">
@@ -13,7 +16,11 @@ cd "/Users/ian/Desktop/开发/openai live orb/open-source/horizon-orb-ui"
 
 cat > README.md <<'EOF'
 # OpenAI Live Orb Study
+## Preview
 
+<p align="center">
+  <img src="./assets/orb-demo-1.png" width="100%" alt="Horizon Orb reproduction">
+</p>
 An independent reverse-engineering study of ChatGPT's real-time voice visualizer.
 
 This project explores the rendering architecture, audio-reactive behavior, state transitions, and runtime characteristics of the **Horizon voice orb** used in ChatGPT Voice.
