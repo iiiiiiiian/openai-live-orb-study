@@ -1,5 +1,6 @@
 node_modules/
 dist/
+demo-dist/
 *.tgz
 .DS_Store
 .env*
@@ -21,3 +22,8 @@ browser-data/
 *trace*.json
 storage-state*.json
 cookies*.json
+
+# Include only the self-contained demo provider; keep broad research exclusions.
+!demo/authorized-renderer/
+!demo/authorized-renderer/**
+.release-check/

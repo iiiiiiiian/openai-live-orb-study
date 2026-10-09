@@ -3,296 +3,135 @@
 </p>
 
 # OpenAI Live Orb Study
+
+A runnable Horizon Orb visual study with a full WebGL2 renderer, React and vanilla JavaScript adapters, and a local Vite demo.
+
+The demo includes the existing renderer implementation, GLSL shaders, watercolor texture, and state-driven animation. It does not use a Canvas 2D placeholder, CSS gradient, or simplified replacement shader.
+
+This is an independent research project, not an official OpenAI product.
+
 ## Preview
 
-<p align="center">
-  <img src="./assets/orb-demo-1.png" width="100%" alt="Horizon Orb reproduction">
-</p>
-An independent reverse-engineering study of ChatGPT's real-time voice visualizer.
+![Local WebGL demo](./assets/local-orb.png)
 
-This project explores the rendering architecture, audio-reactive behavior, state transitions, and runtime characteristics of the **Horizon voice orb** used in ChatGPT Voice.
+The default view is a white background with a centered, responsive orb capped at 300 CSS pixels, in the `listening` state. The image above is a screenshot of the included demo; the live version animates.
 
-The work includes a standalone UI integration layer and documents a broader research effort involving WebGL runtime inspection, deterministic replay, uniform comparison, and pixel-level parity testing.
+## Quick start
 
-> This is an unofficial research project and is not affiliated with, endorsed by, or sponsored by OpenAI.
-
-## Validation Status
-
-| Layer | Status |
-| --- | --- |
-| Renderer parity | PASS |
-| FFT → visual features | PASS |
-| Snapshot → uniforms | PASS |
-| Sampled pixel parity | PASS — SSIM 1.000 |
-| PCM → analyser → FFT | NOT VERIFIED |
-| Voice lifecycle parity | PARTIAL |
-| Playback / ducking parity | NOT VERIFIED |
-| Full end-to-end parity | NOT CLAIMED |
-
-The renderer was validated using captured runtime states. 2,291 captured state frames produced matching final uniforms, and sampled rendered frames reached SSIM 1.000 against their references.
-
-These results validate specific rendering boundaries. They do **not** establish complete behavioral equivalence with ChatGPT Voice.
-
-## What This Repository Contains
-
-This public repository contains the reusable integration layer developed during the study:
-
-- React component API
-- Vanilla JavaScript API
-- renderer-provider protocol
-- audio-level adapter
-- lifecycle management
-- resize and DPR handling
-- reduced-motion handling
-- TypeScript definitions
-- React and vanilla examples
-- regression tests
-
-Recovered proprietary application bundles, research traces, captured user data, and other materials whose redistribution rights are unclear are intentionally excluded.
-
-## Architecture
-
-```text
-Application
-    |
-    +-- state
-    +-- audioLevel / AnalyserNode
-    +-- size / lifecycle
-    |
-    v
-HorizonOrb
-    |
-    v
-Renderer Protocol
-    |
-    v
-Renderer Provider
-    |
-    v
-WebGL2
-````
-
-The public package deliberately separates the application-facing API from the renderer implementation.
-
-## Tech Stack
-
-* TypeScript
-* React 18 / 19
-* Vanilla DOM API
-* WebGL2 renderer protocol
-* CSS
-* ResizeObserver
-* requestAnimationFrame
-* Vitest / Node-based regression testing
-
-No Three.js dependency is required by the UI integration layer.
-
-## Installation
-
-Clone the repository:
+Requires Node.js 22.12+ and a browser with WebGL2 support.
 
 ```bash
 git clone https://github.com/iiiiiiiian/openai-live-orb-study.git
 cd openai-live-orb-study
 npm install
+npm run dev
 ```
 
-Run verification:
+Open [http://localhost:5173/](http://localhost:5173/).
+
+No API key, ChatGPT account, microphone permission, or separate asset download is required. Renderer resources load from the local server. The dev server uses a strict port: if 5173 is occupied, stop the relevant server or run `npm run dev -- --port 5174`.
+
+## Build and verify
 
 ```bash
 npm run verify
+npm run preview
 ```
+
+Verification runs TypeScript checking, the library and demo builds, and the Node tests. Preview serves the built demo at [http://localhost:4173/](http://localhost:4173/).
+
+- `dist/`: compiled UI library.
+- `demo-dist/`: standalone demo, including `authorized-renderer/`. Deploy this entire directory together.
+- `npm test`: library tests; run a build first.
+
+For a browser smoke check, leave both dev and preview servers running in separate terminals, then run:
+
+```bash
+npx playwright install chromium
+npm run smoke
+```
+
+The smoke check verifies renderer readiness, WebGL draw calls, changing animation frames, responsive sizing, DPR, browser errors, and failed or external requests. Screenshots are saved under ignored `artifacts/`.
+
+## Included renderer
+
+The visual pipeline is:
+
+```text
+React / vanilla host
+  → same-origin iframe and frame messages
+  → StateAdapter
+  → HorizonFrameGenerator
+  → WebGL2 interior and composite passes
+```
+
+`demo/authorized-renderer/` contains the frame entry point and state adapter. Its `frozen/` directory contains five renderer/dynamics modules, four GLSL shaders, the renderer manifest, and the watercolor texture.
+
+These 14 runtime files were copied without changes from the existing local full-renderer implementation. The frame adapter is the compiled form of that implementation's `frame.ts`; it is not a newly approximated renderer. No original application bundles, browser profiles, account data, audio captures, or research traces are included.
+
+The UI library remains separate from the renderer. `assetBaseUrl` points to a same-origin directory containing `frame.html`; the demo supplies the included provider. See [RENDERER-PROTOCOL.md](./RENDERER-PROTOCOL.md).
+
+## Vanilla JavaScript
+
+Within this repository, Vite can import the adapter directly:
+
+```ts
+import {createHorizonOrb} from './src/vanilla';
+
+const orb = createHorizonOrb(document.querySelector('#orb')!, {
+  assetBaseUrl: '/authorized-renderer/',
+  state: 'listening',
+  audioLevel: 0,
+  size: 300,
+});
+
+await orb.ready;
+orb.update({state: 'speaking', audioLevel: 0.5});
+
+// On teardown:
+orb.dispose();
+```
+
+For another application, copy the renderer directory to its same-origin static assets and integrate the UI sources or locally built package. The package is not published to npm.
 
 ## React
 
 ```tsx
-import { HorizonOrb } from '@horizon-lab/horizon-orb-ui/react';
-import '@horizon-lab/horizon-orb-ui/styles.css';
+import {HorizonOrb} from './src/index';
 
 export function App() {
   return (
-    <main className="orb-stage">
-      <div className="orb-host">
-        <HorizonOrb
-          assetBaseUrl="/authorized-renderer/"
-          state="listening"
-          audioLevel={0}
-        />
-      </div>
-    </main>
+    <HorizonOrb
+      assetBaseUrl="/authorized-renderer/"
+      state="listening"
+      audioLevel={0}
+      size={300}
+      onError={console.error}
+    />
   );
 }
 ```
 
-## Vanilla JavaScript
+The renderer directory must be served at the URL above. The React component and vanilla controller use the same iframe protocol.
 
-```ts
-import { createHorizonOrb } from '@horizon-lab/horizon-orb-ui/vanilla';
+## State and audio
 
-const orb = createHorizonOrb(host, {
-  assetBaseUrl: '/authorized-renderer/',
-  state: 'idle',
-  size: 300
-});
+Supported state inputs are `idle`, `listening`, `thinking`, `speaking`, and `disconnected`. The current state adapter maps `thinking` to the idle visual baseline.
 
-await orb.ready;
+`audioLevel` accepts a value from 0 to 1 and takes precedence over `audioSource`. Alternatively, pass a caller-owned `AnalyserNode`; the adapter reads time-domain RMS without opening a microphone or changing the audio graph.
 
-orb.update({
-  state: 'speaking',
-  audioLevel: 0.5
-});
+Other options include `size`, `paused`, `className`, and `onError`. When size is omitted, the host container controls layout. The UI handles resizing, DPR, reduced motion, and teardown. The caller owns audio resources; the renderer owns GPU resources.
 
-orb.dispose();
-```
+## Verification scope and limitations
 
-## Public API
+The local dev and production-preview builds were checked in Chromium: the renderer reported ready, WebGL2 draw calls ran, successive screenshots changed, and responsive/DPR dimensions matched. No browser errors, missing resources, or external asset requests were observed.
 
-### `HorizonOrb`
+These checks establish that the included visual renderer runs. They do not establish complete behavioral equivalence with ChatGPT Voice. This project does not include a voice backend, microphone capture flow, full PCM/FFT pipeline, assistant playback, or ducking. WebGL context-loss recovery is not implemented.
 
-```ts
-interface HorizonOrbProps {
-  assetBaseUrl: string | URL;
+Frame messages contain visual state, a scalar audio level, logical time, viewport dimensions, and reduced-motion preference. A same-origin renderer is trusted application code, not an untrusted-code sandbox.
 
-  state?:
-    | 'idle'
-    | 'listening'
-    | 'thinking'
-    | 'speaking'
-    | 'disconnected';
+## License and provenance
 
-  audioLevel?: number;
-  audioSource?: AnalyserNode | null;
-  size?: number;
-  paused?: boolean;
-  className?: string;
-  onError?: (error: Error) => void;
-}
-```
+Project-authored code is available under the [MIT license](./LICENSE). Third-party-derived renderer materials, shaders, textures, and reference imagery are **not** covered by that MIT grant; their original rights remain with their respective owners. Public availability does not itself establish permission to reuse those materials.
 
-### Audio
-
-`audioLevel` accepts a normalized value from `0` to `1` and takes precedence over `audioSource`.
-
-When an `AnalyserNode` is supplied, the integration layer reads time-domain RMS only. It does not acquire microphone permission, modify the caller's audio graph, or dispose of caller-owned audio resources.
-
-### Vanilla Controller
-
-`createHorizonOrb()` returns:
-
-```ts
-{
-  ready: Promise<void>;
-  update(options): void;
-  dispose(): void;
-}
-```
-
-## Renderer Protocol
-
-The renderer is intentionally separated from the public UI integration.
-
-`assetBaseUrl` points to a same-origin renderer provider containing a `frame.html` implementation compatible with the protocol documented in:
-
-[`RENDERER-PROTOCOL.md`](./RENDERER-PROTOCOL.md)
-
-This boundary allows the UI package to remain independent from recovered or otherwise restricted rendering assets.
-
-## Reverse-Engineering Method
-
-The broader study used a deterministic validation pipeline:
-
-```text
-Runtime Capture
-      |
-      v
-State / Audio Features
-      |
-      v
-Visual Snapshot
-      |
-      v
-GPU Uniforms
-      |
-      v
-WebGL Renderer
-      |
-      v
-Frame Capture
-      |
-      v
-Pixel Diff / SSIM
-```
-
-Additional tooling developed during the research supported:
-
-* WebGL call inspection
-* uniform and UBO capture
-* runtime event capture
-* deterministic trace replay
-* frame comparison
-* SSIM calculation
-* first-divergence diagnostics
-
-The public UI package is the reusable integration result of that research rather than a claim of complete ChatGPT Voice reproduction.
-
-## Known Limitations
-
-* Full PCM → analyser → FFT parity has not been verified.
-* Voice lifecycle behavior has only been partially validated.
-* Assistant playback and ducking behavior have not been fully reproduced.
-* `thinking` currently uses the available idle visual baseline at the integration layer.
-* The package does not automatically acquire microphone access.
-* WebGL context-loss recovery is the responsibility of the renderer provider.
-* Each orb instance currently uses an isolated same-origin iframe for the renderer boundary.
-* Full end-to-end behavioral parity with ChatGPT Voice is not claimed.
-
-## Security
-
-The UI sends only renderer state, normalized audio level, logical timing, and viewport information to the configured same-origin renderer provider.
-
-It does not send:
-
-* raw PCM
-* raw FFT data
-* account information
-* recordings
-* telemetry to an external service
-
-A renderer provider is trusted application code. Same-origin enforcement should not be treated as a sandbox for untrusted renderers.
-
-## Research and Redistribution
-
-Some materials examined during this study originated from publicly delivered client-side resources.
-
-Recovered shaders, textures, application bundles, runtime traces, and other materials with unresolved redistribution rights are not included in this public repository.
-
-The code in this repository should not be interpreted as OpenAI source code or an official OpenAI implementation.
-
-See [`NOTICE.md`](./NOTICE.md) for additional information.
-
-## Project Status
-
-The visual rendering investigation is considered complete for the verified boundaries listed above.
-
-Further work on full ChatGPT Voice end-to-end parity is intentionally out of scope for this repository.
-
-## Disclaimer
-
-This project is an independent technical study.
-
-OpenAI, ChatGPT, and related names and marks are the property of their respective owners. This repository is not affiliated with OpenAI.
-
-## License
-
-See [`LICENSE`](./LICENSE) and [`NOTICE.md`](./NOTICE.md).
-
-Redistribution status for recovered third-party materials is separate from the licensing status of original code in this repository.
-EOF
-
-git add README.md
-git commit -m "Rewrite README for public release"
-git push
-
-```
-```
-
+See [NOTICE.md](./NOTICE.md) for the file-level scope and provenance. OpenAI and ChatGPT names and marks belong to their respective owners. This project is not affiliated with or endorsed by OpenAI.
